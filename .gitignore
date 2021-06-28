@@ -1,0 +1,10 @@
+# IDE
+/.idea
+/.vscode
+
+# Package managers
+vendor/
+composer.lock
+
+# Cache
+/.phpunit.result.cache

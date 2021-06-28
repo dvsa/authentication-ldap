@@ -1,0 +1,41 @@
+{
+  "name": "dvsa/authentication-ldap",
+  "type": "library",
+  "description": "A wrapper around LDAP",
+  "keywords": ["dvsa", "authentication", "ldap"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "DVSA",
+      "homepage": "https://www.gov.uk/government/organisations/driver-and-vehicle-standards-agency"
+    }
+  ],
+  "require": {
+    "php": "^7.2.5 || ^8.0",
+    "ext-json": "*",
+    "dvsa/contracts": "dev-main",
+    "firebase/php-jwt": "^5.2",
+    "league/oauth2-client": "^2.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Dvsa\\Authentication\\Ldap\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Dvsa\\Authentication\\Ldap\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "bamarni/composer-bin-plugin": "^1.4",
+    "phpunit/phpunit": "^8.5"
+  },
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true,
+    "preferred-install": "dist"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
