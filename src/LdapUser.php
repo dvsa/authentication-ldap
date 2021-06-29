@@ -3,7 +3,6 @@
 namespace Dvsa\Authentication\Ldap;
 
 use Dvsa\Contracts\Auth\AbstractResourceOwner;
-use Symfony\Component\Ldap\Entry;
 
 /**
  * A Resource owner object, containing helper methods for non-custom attributes.
@@ -15,5 +14,10 @@ class LdapUser extends AbstractResourceOwner
     public function getId()
     {
         return $this->get('dn');
+    }
+
+    public function getUsername()
+    {
+        return $this->get('username');
     }
 }

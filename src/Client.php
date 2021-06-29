@@ -8,20 +8,11 @@ use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
 use Symfony\Component\Ldap\Entry;
 use Symfony\Component\Ldap\Exception\ConnectionException;
-use Symfony\Component\Ldap\Exception\ExceptionInterface;
 use Symfony\Component\Ldap\Exception\LdapException;
 use Symfony\Component\Ldap\LdapInterface;
 
 class Client implements OAuthClientInterface
 {
-    /**
-     * When checking nbf, iat or expiration times on tokens, we want to provide
-     * some extra leeway time to account for clock skew.
-     *
-     * @var int
-     */
-    public static $leeway = 0;
-
     /**
      * @var int
      */
@@ -48,18 +39,27 @@ class Client implements OAuthClientInterface
     protected $tokenFactory;
 
     /**
+     * @var string
+     */
+    protected $secret;
+
+    /**
      * Ldap Client constructor.
      *
      * @param  LdapInterface  $ldap
      * @param  string         $baseDn
-     * @param  string         $secret           secret key to sign the JWT
+     * @param  string         $secret key to sign the JWT
      */
     public function __construct(LdapInterface $ldap, string $baseDn, string $secret)
     {
         $this->ldap = $ldap;
         $this->baseDn = $baseDn;
+        $this->secret = $secret;
     }
 
+    /**
+     * @throws ClientException
+     */
     public function authenticate(string $identifier, string $password): AccessTokenInterface
     {
         $dn = $this->buildDn($identifier);
@@ -124,12 +124,25 @@ class Client implements OAuthClientInterface
 
     public function getResourceOwner(AccessTokenInterface $token): ResourceOwnerInterface
     {
-        // TODO: Implement getResourceOwner() method.
+        // If the ID token is not null, use to build the resource owner.
+        // Otherwise, use the claims from the access token.
+        if ($idToken = $token->getIdToken()) {
+            $tokenClaims = $this->decodeToken($idToken);
+        } else {
+            $tokenClaims = $this->decodeToken($token->getToken());
+        }
+
+        return $this->createResourceOwner($tokenClaims, $token);
+    }
+
+    protected function createResourceOwner(array $claims, AccessTokenInterface $token): ResourceOwnerInterface
+    {
+        return new LdapUser($claims);
     }
 
     public function decodeToken(string $token): array
     {
-        // TODO: Implement decodeToken() method.
+        return $this->getTokenFactory()->validate($token);
     }
 
     public function refreshTokens(string $refreshToken, string $identifier): AccessTokenInterface
@@ -141,8 +154,6 @@ class Client implements OAuthClientInterface
     {
         $dn = $this->buildDn($identifier);
 
-        // At this point, the bind was successful.
-        // Query the directory for the user details to build the OIDC tokens.
         $query = $this->ldap->query($dn, '(objectClass=inetOrgPerson)');
         $entry = $query->execute();
 
@@ -174,10 +185,12 @@ class Client implements OAuthClientInterface
     {
         $options = [];
 
-        $options['access_token'] = $this->getTokenFactory()->make(['username' => $entry->getDn()]);
-        $options['id_token'] = $this->getTokenFactory()->make($entry->getAttributes());
-        $options['refresh_token'] = bin2hex(openssl_random_pseudo_bytes(8));
-        $options['expires_in'] = self::$tokenExpiry;
+        $tokenFactory = $this->getTokenFactory();
+
+        $options['access_token'] = $tokenFactory->make($entry->get('dn'), ['username' => $entry->get('dn')]);
+        $options['id_token'] = $tokenFactory->make($entry->get('dn'), $entry->getAttributes());
+        $options['refresh_token'] = bin2hex(openssl_random_pseudo_bytes(16));
+        $options['expires_in'] = $tokenFactory->getExpiresIn();
 
         return new AccessToken($options);
     }
@@ -202,8 +215,6 @@ class Client implements OAuthClientInterface
             return $this->tokenFactory;
         }
 
-        $this->tokenFactory = new TokenFactory($this->secret);
-
-        return $this->tokenFactory;
+        return ($this->tokenFactory = new TokenFactory($this->secret));
     }
 }
