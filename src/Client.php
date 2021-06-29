@@ -123,7 +123,27 @@ class Client implements OAuthClientInterface
 
     public function getUserByIdentifier(string $identifier): ResourceOwnerInterface
     {
-        // TODO: Implement getUserByIdentifier() method.
+        $dn = $this->buildDn($identifier);
+
+        // At this point, the bind was successful.
+        // Query the directory for the user details to build the OIDC tokens.
+        $query = $this->ldap->query($dn, '(objectClass=inetOrgPerson)');
+        $entry = $query->execute();
+
+        if (empty($entry)) {
+            throw new ClientException('User not found.');
+        }
+
+        $user = $entry[0];
+
+        $attributes = [
+            'dn' => $user->getDn(),
+            'cn' => $user->getAttribute('cn'),
+        ];
+
+        return new LdapUser($attributes);
+    }
+
     protected function bind(string $dn, string $password): void
     {
         $this->ldap->bind($dn, $password);
