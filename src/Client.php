@@ -78,7 +78,23 @@ class Client implements OAuthClientInterface
 
     public function register(string $identifier, string $password, array $attributes = []): ResourceOwnerInterface
     {
-        // TODO: Implement register() method.
+        $dn = $this->buildDn($identifier);
+
+        $entry = new Entry($dn, [
+            'objectClass' => ['inetOrgPerson'],
+            'userPassword' => [$this->generatePassword($password)],
+            'sn' => [$identifier],
+        ]);
+
+        $entryManager = $this->ldap->getEntryManager();
+
+        try {
+            $entryManager->add($entry);
+        } catch (LdapException $e) {
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        return new LdapUser($entry->getAttributes());
     }
 
     public function changePassword(string $identifier, string $newPassword): bool
