@@ -154,6 +154,12 @@ class Client implements OAuthClientInterface
         return sprintf('cn=%s,%s', $identifier, $this->baseDn);
     }
 
+    protected function generatePassword(string $password): string
+    {
+        $salt = bin2hex(openssl_random_pseudo_bytes(8));
+
+        return '{SSHA}' . base64_encode(sha1($password . $salt, true) . $salt);
+    }
 
     public function setTokenFactory(TokenFactoryInterface $factory): self
     {
