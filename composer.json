@@ -15,7 +15,8 @@
     "ext-json": "*",
     "dvsa/contracts": "dev-main",
     "firebase/php-jwt": "^5.2",
-    "league/oauth2-client": "^2.6"
+    "league/oauth2-client": "^2.6",
+    "symfony/ldap": "^5.3"
   },
   "autoload": {
     "psr-4": {
