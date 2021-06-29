@@ -154,6 +154,18 @@ class Client implements OAuthClientInterface
         return sprintf('cn=%s,%s', $identifier, $this->baseDn);
     }
 
+    protected function generateToken(LdapUser $entry): AccessTokenInterface
+    {
+        $options = [];
+
+        $options['access_token'] = $this->getTokenFactory()->make(['username' => $entry->getDn()]);
+        $options['id_token'] = $this->getTokenFactory()->make($entry->getAttributes());
+        $options['refresh_token'] = bin2hex(openssl_random_pseudo_bytes(8));
+        $options['expires_in'] = self::$tokenExpiry;
+
+        return new AccessToken($options);
+    }
+
     protected function generatePassword(string $password): string
     {
         $salt = bin2hex(openssl_random_pseudo_bytes(8));
