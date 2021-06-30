@@ -7,8 +7,7 @@ use Dvsa\Contracts\Auth\Exceptions\ClientException;
 use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
 use Symfony\Component\Ldap\Entry;
-use Symfony\Component\Ldap\Exception\ConnectionException;
-use Symfony\Component\Ldap\Exception\LdapException;
+use Symfony\Component\Ldap\Exception\ExceptionInterface;
 use Symfony\Component\Ldap\LdapInterface;
 
 class Client implements OAuthClientInterface
@@ -16,7 +15,7 @@ class Client implements OAuthClientInterface
     /**
      * @var int
      */
-    public static $tokenExpiry = 3600;
+    public static $tokenExpiry = 86400;
 
     /**
      * @var int
@@ -58,7 +57,7 @@ class Client implements OAuthClientInterface
     }
 
     /**
-     * @throws ClientException
+     * @inheritDoc
      */
     public function authenticate(string $identifier, string $password): AccessTokenInterface
     {
@@ -67,7 +66,7 @@ class Client implements OAuthClientInterface
         try {
             // Try the bind with the username/password combination.
             $this->bind($dn, $password);
-        } catch (ConnectionException $e) {
+        } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
@@ -76,6 +75,9 @@ class Client implements OAuthClientInterface
         return $this->generateToken($user);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function register(string $identifier, string $password, array $attributes = []): ResourceOwnerInterface
     {
         $dn = $this->buildDn($identifier);
@@ -94,38 +96,56 @@ class Client implements OAuthClientInterface
 
         try {
             $entryManager->add($entry);
-        } catch (LdapException $e) {
+        } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
         return new LdapUser($entry->getAttributes());
     }
 
+    /**
+     * @inheritDoc
+     */
     public function changePassword(string $identifier, string $newPassword): bool
     {
         // TODO: Implement changePassword() method.
     }
 
+    /**
+     * @inheritDoc
+     */
     public function changeAttribute(string $identifier, string $key, string $value): bool
     {
         // TODO: Implement changeAttribute() method.
     }
 
+    /**
+     * @inheritDoc
+     */
     public function changeAttributes(string $identifier, array $attributes): bool
     {
         // TODO: Implement changeAttributes() method.
     }
 
+    /**
+     * @inheritDoc
+     */
     public function enableUser(string $identifier): bool
     {
         // TODO: Implement enableUser() method.
     }
 
+    /**
+     * @inheritDoc
+     */
     public function disableUser(string $identifier): bool
     {
         // TODO: Implement disableUser() method.
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getResourceOwner(AccessTokenInterface $token): ResourceOwnerInterface
     {
         // If the ID token is not null, use to build the resource owner.
@@ -144,16 +164,25 @@ class Client implements OAuthClientInterface
         return new LdapUser($claims);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function decodeToken(string $token): array
     {
         return $this->getTokenFactory()->validate($token);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function refreshTokens(string $refreshToken, string $identifier): AccessTokenInterface
     {
-        // TODO: Implement refreshTokens() method.
+        throw new ClientException('Refreshing of tokens is not supported.');
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getUserByIdentifier(string $identifier): ResourceOwnerInterface
     {
         $dn = $this->buildDn($identifier);
@@ -175,6 +204,9 @@ class Client implements OAuthClientInterface
         return new LdapUser($attributes);
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     protected function bind(string $dn, string $password): void
     {
         $this->ldap->bind($dn, $password);
@@ -182,7 +214,11 @@ class Client implements OAuthClientInterface
 
     protected function buildDn(string $identifier): string
     {
-        return sprintf('cn=%s,%s', $this->ldap->escape($identifier, '', \LDAP_ESCAPE_DN), $this->baseDn);
+        return sprintf(
+            'cn=%s,%s',
+            $this->ldap->escape($identifier, '', \LDAP_ESCAPE_DN),
+            $this->baseDn
+        );
     }
 
     protected function generateToken(LdapUser $entry): AccessTokenInterface
