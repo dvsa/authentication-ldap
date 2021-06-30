@@ -48,7 +48,11 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
      */
     public function validate(string $token): array
     {
-        $claims = (array) JWT::decode($token, $this->secret, ['HS512']);
+        try {
+            $claims = (array)JWT::decode($token, $this->secret, ['HS512']);
+        } catch (\Exception $e) {
+            throw new InvalidTokenException($e->getMessage(), (int) $e->getCode(), $e);
+        }
 
         if ($claims['aud'] !== $_SERVER['SERVER_NAME']) {
             throw new InvalidTokenException('Invalid "aud" claim.');
