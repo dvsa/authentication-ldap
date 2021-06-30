@@ -67,7 +67,7 @@ class Client implements OAuthClientInterface
             // Try the bind with the username/password combination.
             $this->bind($dn, $password);
         } catch (ExceptionInterface $e) {
-            throw new ClientException($e->getMessage(), $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
 
         $user = $this->getUserByIdentifier($identifier);
@@ -97,7 +97,7 @@ class Client implements OAuthClientInterface
         try {
             $entryManager->add($entry);
         } catch (ExceptionInterface $e) {
-            throw new ClientException($e->getMessage(), $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
 
         return new LdapUser($entry->getAttributes());
@@ -204,6 +204,22 @@ class Client implements OAuthClientInterface
         return new LdapUser($attributes);
     }
 
+    public function setTokenFactory(TokenFactoryInterface $factory): self
+    {
+        $this->tokenFactory = $factory;
+
+        return $this;
+    }
+
+    public function getTokenFactory(): TokenFactoryInterface
+    {
+        if (isset($this->tokenFactory)) {
+            return $this->tokenFactory;
+        }
+
+        return ($this->tokenFactory = new TokenFactory($this->secret));
+    }
+
     /**
      * @throws ExceptionInterface
      */
@@ -221,7 +237,7 @@ class Client implements OAuthClientInterface
         );
     }
 
-    protected function generateToken(LdapUser $entry): AccessTokenInterface
+    protected function generateToken(ResourceOwnerInterface $entry): AccessTokenInterface
     {
         $options = [];
 
@@ -229,7 +245,7 @@ class Client implements OAuthClientInterface
 
         $options['access_token'] = $tokenFactory->make($entry->get('dn'), ['username' => $entry->get('dn')]);
         $options['id_token'] = $tokenFactory->make($entry->get('dn'), $entry->getAttributes());
-        $options['refresh_token'] = bin2hex(openssl_random_pseudo_bytes(16));
+        $options['refresh_token'] = $this->random(32);
         $options['expires_in'] = $tokenFactory->getExpiresIn();
 
         return new AccessToken($options);
@@ -237,25 +253,27 @@ class Client implements OAuthClientInterface
 
     protected function generatePassword(string $password): string
     {
-        $salt = bin2hex(openssl_random_pseudo_bytes(8));
+        $salt = $this->random(8);
 
         return '{SSHA}' . base64_encode(sha1($password . $salt, true) . $salt);
     }
 
-    public function setTokenFactory(TokenFactoryInterface $factory): self
+    /**
+     * Generate a truly "random" alpha-numeric string.
+     */
+    protected function random(int $length = 16): string
     {
-        $this->tokenFactory = $factory;
+        $string = "";
 
-        return $this;
-    }
+        while (($len = strlen($string)) < $length) {
+            $size = $length - $len;
 
-    public function getTokenFactory(): TokenFactoryInterface
-    {
-        if (isset($this->tokenFactory)) {
-            return $this->tokenFactory;
+            $bytes = random_bytes($size);
+
+            $string .= substr(str_replace(['/', '+', '='], '', base64_encode($bytes)), 0, $size);
         }
 
-        return ($this->tokenFactory = new TokenFactory($this->secret));
+        return $string;
     }
 
     protected function formatAttributes(array $attributes): array

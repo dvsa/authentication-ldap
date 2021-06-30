@@ -19,4 +19,9 @@ interface TokenFactoryInterface
      * @return array of the claims in the token.
      */
     public function validate(string $token): array;
+
+    /**
+     * Gets the token expiration in seconds.
+     */
+    public function getExpiresIn(): int;
 }
