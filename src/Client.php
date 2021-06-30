@@ -80,11 +80,15 @@ class Client implements OAuthClientInterface
     {
         $dn = $this->buildDn($identifier);
 
-        $entry = new Entry($dn, [
+        $formattedAttributes = $this->formatAttributes($attributes);
+
+        $ldapAttributes = array_merge([
             'objectClass' => ['inetOrgPerson'],
             'userPassword' => [$this->generatePassword($password)],
             'sn' => [$identifier],
-        ]);
+        ], $formattedAttributes);
+
+        $entry = new Entry($dn, $ldapAttributes);
 
         $entryManager = $this->ldap->getEntryManager();
 
@@ -216,5 +220,16 @@ class Client implements OAuthClientInterface
         }
 
         return ($this->tokenFactory = new TokenFactory($this->secret));
+    }
+
+    protected function formatAttributes(array $attributes): array
+    {
+        $formatted = [];
+
+        foreach ($attributes as $key => $value) {
+            $formatted["x-" . $key] = is_array($value) ? $value : [$value];
+        }
+
+        return $formatted;
     }
 }
