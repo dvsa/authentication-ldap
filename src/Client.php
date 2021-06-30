@@ -182,7 +182,7 @@ class Client implements OAuthClientInterface
 
     protected function buildDn(string $identifier): string
     {
-        return sprintf('cn=%s,%s', $identifier, $this->baseDn);
+        return sprintf('cn=%s,%s', $this->ldap->escape($identifier, '', \LDAP_ESCAPE_DN), $this->baseDn);
     }
 
     protected function generateToken(LdapUser $entry): AccessTokenInterface
