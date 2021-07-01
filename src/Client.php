@@ -34,7 +34,7 @@ class Client implements OAuthClientInterface
     protected $baseDn;
 
     /**
-     * @var TokenFactoryInterface
+     * @var ?TokenFactoryInterface
      */
     protected $tokenFactory;
 
