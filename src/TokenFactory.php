@@ -2,8 +2,10 @@
 
 namespace Dvsa\Authentication\Ldap;
 
+use Carbon\CarbonImmutable;
 use Dvsa\Contracts\Auth\Exceptions\InvalidTokenException;
 use Firebase\JWT\JWT;
+use Illuminate\Support\Str;
 
 class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
 {
@@ -24,7 +26,7 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
      */
     public function make(string $sub, array $claims = []): string
     {
-        $now = time();
+        $now = CarbonImmutable::now();
 
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.2
         $claims['sub'] = $sub;
@@ -32,13 +34,13 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3
         $claims['iss'] = $claims['aud'] = $_SERVER['SERVER_NAME'];
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
-        $claims['exp'] = $now + $this->expiresIn;
+        $claims['exp'] = $now->addSeconds($this->expiresIn)->timestamp;
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
-        $claims['nbf'] = $now;
+        $claims['nbf'] = $now->timestamp;
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.6
-        $claims['iat'] = $now;
+        $claims['iat'] = $now->timestamp;
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.7
-        $claims['jti'] = bin2hex(openssl_random_pseudo_bytes(8));
+        $claims['jti'] = Str::random(8);
 
         return JWT::encode($claims, $this->secret, 'HS512');
     }

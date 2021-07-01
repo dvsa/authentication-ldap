@@ -6,6 +6,7 @@ use Dvsa\Contracts\Auth\AccessTokenInterface;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
 use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
+use Illuminate\Support\Str;
 use Symfony\Component\Ldap\Entry;
 use Symfony\Component\Ldap\Exception\ExceptionInterface;
 use Symfony\Component\Ldap\LdapInterface;
@@ -33,7 +34,7 @@ class Client implements OAuthClientInterface
     protected $baseDn;
 
     /**
-     * @var TokenFactory
+     * @var TokenFactoryInterface
      */
     protected $tokenFactory;
 
@@ -243,9 +244,9 @@ class Client implements OAuthClientInterface
 
         $tokenFactory = $this->getTokenFactory();
 
-        $options['access_token'] = $tokenFactory->make($entry->get('dn'), ['username' => $entry->get('dn')]);
-        $options['id_token'] = $tokenFactory->make($entry->get('dn'), $entry->getAttributes());
-        $options['refresh_token'] = $this->random(32);
+        $options['access_token'] = $tokenFactory->make($entry['dn'], ['username' => $entry['dn']]);
+        $options['id_token'] = $tokenFactory->make($entry['dn'], $entry->toArray());
+        $options['refresh_token'] = Str::random(32);
         $options['expires_in'] = $tokenFactory->getExpiresIn();
 
         return new AccessToken($options);
@@ -253,27 +254,9 @@ class Client implements OAuthClientInterface
 
     protected function generatePassword(string $password): string
     {
-        $salt = $this->random(8);
+        $salt = Str::random(8);
 
         return '{SSHA}' . base64_encode(sha1($password . $salt, true) . $salt);
-    }
-
-    /**
-     * Generate a truly "random" alpha-numeric string.
-     */
-    protected function random(int $length = 16): string
-    {
-        $string = "";
-
-        while (($len = strlen($string)) < $length) {
-            $size = $length - $len;
-
-            $bytes = random_bytes($size);
-
-            $string .= substr(str_replace(['/', '+', '='], '', base64_encode($bytes)), 0, $size);
-        }
-
-        return $string;
     }
 
     protected function formatAttributes(array $attributes): array
