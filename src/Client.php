@@ -14,16 +14,6 @@ use Symfony\Component\Ldap\LdapInterface;
 class Client implements OAuthClientInterface
 {
     /**
-     * @var int
-     */
-    public static $tokenExpiry = 86400;
-
-    /**
-     * @var int
-     */
-    public static $refreshTokenExpiry = 86400;
-
-    /**
      * @var LdapInterface
      */
     protected $ldap;
