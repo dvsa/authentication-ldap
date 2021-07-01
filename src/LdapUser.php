@@ -11,8 +11,17 @@ use Dvsa\Contracts\Auth\AbstractResourceOwner;
  */
 class LdapUser extends AbstractResourceOwner
 {
-    public function getId()
+    public function __construct(array $attributes = [])
     {
-        // TODO: Implement getId() method.
+        if (isset($attributes['dn'])) {
+            throw new \RuntimeException('The resource owner must have a `dn` attribute.');
+        }
+
+        parent::__construct($attributes);
+    }
+
+    public function getId(): string
+    {
+        return $this->get('dn');
     }
 }

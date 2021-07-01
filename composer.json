@@ -13,9 +13,14 @@
   "require": {
     "php": "^7.2.5 || ^8.0",
     "ext-json": "*",
+    "ext-ldap": "*",
+    "ext-openssl": "*",
     "dvsa/contracts": "dev-main",
     "firebase/php-jwt": "^5.2",
-    "league/oauth2-client": "^2.6"
+    "illuminate/support": "^8.49",
+    "league/oauth2-client": "^2.6",
+    "nesbot/carbon": "^2.50",
+    "symfony/ldap": "^5.3"
   },
   "autoload": {
     "psr-4": {
