@@ -12,7 +12,7 @@ abstract class AbstractTokenFactory implements TokenFactoryInterface
     protected $expiresIn = 3600;
 
     /**
-     * Gets an lifetime for tokens created by this factory.
+     * Gets a lifetime for tokens created by this factory.
      */
     public function getExpiresIn(): int
     {
@@ -20,7 +20,7 @@ abstract class AbstractTokenFactory implements TokenFactoryInterface
     }
 
     /**
-     * Sets an lifetime for tokens created by this factory.
+     * Sets a lifetime for tokens created by this factory.
      */
     public function setExpiresIn(int $expiresIn): self
     {
