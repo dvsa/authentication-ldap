@@ -38,7 +38,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
 
         $this->mockLdap->method('getEntryManager')->willReturn($this->mockEntryManager);
 
-        $this->client = new Client($this->mockLdap, 'BASE_DN', 'SECRET');
+        $this->client = new Client($this->mockLdap, 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
     }
 
     /**
@@ -47,6 +47,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
     public function testMethodsWillThrowContractedException(string $method, array $args = []): void
     {
         $this->mockLdap->method('bind')->willThrowException(new ConnectionException);
+        $this->mockLdap->method('query')->willThrowException(new LdapException);
         $this->mockEntryManager->method(new IsAnything)->willThrowException(new LdapException);
 
         $this->expectException(ClientException::class);
