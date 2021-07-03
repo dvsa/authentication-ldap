@@ -8,6 +8,7 @@ use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Symfony\Component\Ldap\Adapter\ExtLdap\EntryManager;
 use Symfony\Component\Ldap\Adapter\ExtLdap\UpdateOperation;
 use Symfony\Component\Ldap\Entry;
 use Symfony\Component\Ldap\Exception\ExceptionInterface;
@@ -88,9 +89,12 @@ class Client implements OAuthClientInterface
         return $this->generateToken($user);
     }
 
+    /**
+     * @throws ClientException
+     */
     protected function throwIfAccountDisabled(ResourceOwnerInterface $user): void
     {
-        if (Arr::first($user->get('userAccountControl')) === 2) {
+        if (Arr::first($user['userAccountControl']) === '2') {
             throw new ClientException('Account disabled.');
         }
     }
@@ -112,6 +116,9 @@ class Client implements OAuthClientInterface
 
         $entry = new Entry($dn, $ldapAttributes);
 
+        /**
+         * @var EntryManager $entryManager
+         */
         $entryManager = $this->ldap->getEntryManager();
 
         try {
@@ -153,6 +160,9 @@ class Client implements OAuthClientInterface
         }
 
         try {
+            /**
+             * @var EntryManager $entryManager
+             */
             $entryManager = $this->ldap->getEntryManager();
 
             $dn = $this->buildDn($identifier);
@@ -172,7 +182,7 @@ class Client implements OAuthClientInterface
      */
     public function enableUser(string $identifier): bool
     {
-        $this->changeAttribute($identifier, 'userAccountControl', 0);
+        $this->changeAttribute($identifier, 'userAccountControl', '0');
 
         return true;
     }
@@ -182,7 +192,7 @@ class Client implements OAuthClientInterface
      */
     public function disableUser(string $identifier): bool
     {
-        $this->changeAttribute($identifier, 'userAccountControl', 2);
+        $this->changeAttribute($identifier, 'userAccountControl', '2');
 
         return true;
     }
@@ -330,7 +340,7 @@ class Client implements OAuthClientInterface
     /**
      * @param mixed $value
      *
-     * @return string
+     * @return array
      */
     protected function formatAttributeValue($value): array
     {
