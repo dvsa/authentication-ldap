@@ -1,6 +1,6 @@
 <?php
 
-namespace Dvsa\Authentication\Cognito\Tests;
+namespace Dvsa\Authentication\Ldap\Tests;
 
 use Dvsa\Authentication\Ldap\Client;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
@@ -64,16 +64,6 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
         yield ['changeAttributes', ['IDENTIFIER', []]];
         yield ['enableUser', ['IDENTIFIER']];
         yield ['disableUser', ['IDENTIFIER']];
-    }
-
-    public function testGetUserWillThrowErrorWhenFindingNonExistentUser(): void
-    {
-        $queryMock = $this->createMock(QueryInterface::class);
-
-        $this->mockLdap->method('query')->willReturn($queryMock);
-
-        $this->expectException(ClientException::class);
-
-        $this->client->getUserByIdentifier('IDENTIFIER');
+        yield ['getUserByIdentifier', ['IDENTIFIER']];
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Dvsa\Authentication\Cognito\Tests;
+namespace Dvsa\Authentication\Ldap\Tests;
 
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
