@@ -17,6 +17,9 @@ use Symfony\Component\Ldap\LdapInterface;
 
 class Client implements OAuthClientInterface
 {
+    const ACCOUNT_ENABLED = 0x0200;
+    const ACCOUNT_DISABLED = 0x0002;
+
     /**
      * Alternative to using custom object classes in LDAP.
      * Will translate attributes passed to this object's methods ($attributes).
@@ -94,7 +97,7 @@ class Client implements OAuthClientInterface
      */
     protected function throwIfAccountDisabled(ResourceOwnerInterface $user): void
     {
-        if (Arr::first($user['userAccountControl']) === '2') {
+        if (Arr::first($user['userAccountControl']) === (string) self::ACCOUNT_DISABLED) {
             throw new ClientException('Account disabled.');
         }
     }
@@ -182,7 +185,7 @@ class Client implements OAuthClientInterface
      */
     public function enableUser(string $identifier): bool
     {
-        $this->changeAttribute($identifier, 'userAccountControl', '0');
+        $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_ENABLED);
 
         return true;
     }
@@ -192,7 +195,7 @@ class Client implements OAuthClientInterface
      */
     public function disableUser(string $identifier): bool
     {
-        $this->changeAttribute($identifier, 'userAccountControl', '2');
+        $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_DISABLED);
 
         return true;
     }
