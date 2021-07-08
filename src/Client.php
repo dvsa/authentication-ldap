@@ -6,13 +6,30 @@ use Dvsa\Contracts\Auth\AccessTokenInterface;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
 use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Symfony\Component\Ldap\Adapter\ExtLdap\EntryManager;
+use Symfony\Component\Ldap\Adapter\ExtLdap\UpdateOperation;
 use Symfony\Component\Ldap\Entry;
 use Symfony\Component\Ldap\Exception\ExceptionInterface;
+use Symfony\Component\Ldap\Exception\LdapException;
 use Symfony\Component\Ldap\LdapInterface;
 
 class Client implements OAuthClientInterface
 {
+    const ACCOUNT_ENABLED = 0x0200;
+    const ACCOUNT_DISABLED = 0x0002;
+
+    /**
+     * Alternative to using custom object classes in LDAP.
+     * Will translate attributes passed to this object's methods ($attributes).
+     *
+     * ['attribute_key_1' => 'ldap_mapped_attribute', ...]
+     *
+     * @var array
+     */
+    public static $attributeMap = [];
+
     /**
      * @var LdapInterface
      */
@@ -34,16 +51,24 @@ class Client implements OAuthClientInterface
     protected $secret;
 
     /**
+     * @var array
+     */
+    protected $objectClass;
+
+    /**
      * Ldap Client constructor.
      *
-     * @param  LdapInterface  $ldap
-     * @param  string         $baseDn
-     * @param  string         $secret key to sign the JWT
+     * @param  LdapInterface $ldap
+     * @param  string $baseDn
+     * @param  array  $objectClass  without extension of the `register` method, the object classes provided must
+     *                              have the attributes: `userPassword` & `userAccountControl`
+     * @param  string $secret key to sign the JWT
      */
-    public function __construct(LdapInterface $ldap, string $baseDn, string $secret)
+    public function __construct(LdapInterface $ldap, string $baseDn, array $objectClass, string $secret)
     {
         $this->ldap = $ldap;
         $this->baseDn = $baseDn;
+        $this->objectClass = $objectClass;
         $this->secret = $secret;
     }
 
@@ -55,7 +80,6 @@ class Client implements OAuthClientInterface
         $dn = $this->buildDn($identifier);
 
         try {
-            // Try the bind with the username/password combination.
             $this->bind($dn, $password);
         } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
@@ -63,7 +87,19 @@ class Client implements OAuthClientInterface
 
         $user = $this->getUserByIdentifier($identifier);
 
+        $this->throwIfAccountDisabled($user);
+
         return $this->generateToken($user);
+    }
+
+    /**
+     * @throws ClientException
+     */
+    protected function throwIfAccountDisabled(ResourceOwnerInterface $user): void
+    {
+        if (Arr::first($user['userAccountControl']) === (string) self::ACCOUNT_DISABLED) {
+            throw new ClientException('Account disabled.');
+        }
     }
 
     /**
@@ -76,13 +112,16 @@ class Client implements OAuthClientInterface
         $formattedAttributes = $this->formatAttributes($attributes);
 
         $ldapAttributes = array_merge([
-            'objectClass' => ['inetOrgPerson'],
+            'objectClass' => $this->objectClass,
             'userPassword' => [$this->generatePassword($password)],
-            'sn' => [$identifier],
+            'userAccountControl' => [0],
         ], $formattedAttributes);
 
         $entry = new Entry($dn, $ldapAttributes);
 
+        /**
+         * @var EntryManager $entryManager
+         */
         $entryManager = $this->ldap->getEntryManager();
 
         try {
@@ -99,7 +138,7 @@ class Client implements OAuthClientInterface
      */
     public function changePassword(string $identifier, string $newPassword): bool
     {
-        // TODO: Implement changePassword() method.
+        return $this->changeAttributes($identifier, ['userPassword' => $this->generatePassword($newPassword)]);
     }
 
     /**
@@ -107,7 +146,7 @@ class Client implements OAuthClientInterface
      */
     public function changeAttribute(string $identifier, string $key, string $value): bool
     {
-        // TODO: Implement changeAttribute() method.
+        return $this->changeAttributes($identifier, [$key => $value]);
     }
 
     /**
@@ -115,7 +154,30 @@ class Client implements OAuthClientInterface
      */
     public function changeAttributes(string $identifier, array $attributes): bool
     {
-        // TODO: Implement changeAttributes() method.
+        $formattedAttributes = $this->formatAttributes($attributes);
+
+        $operations = [];
+
+        foreach ($formattedAttributes as $key => $value) {
+            $operations[$key] = new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, $key, Arr::wrap($value));
+        }
+
+        try {
+            /**
+             * @var EntryManager $entryManager
+             */
+            $entryManager = $this->ldap->getEntryManager();
+
+            $dn = $this->buildDn($identifier);
+
+            $entry = $this->getLdapEntry($dn);
+
+            $entryManager->applyOperations($entry->getDn(), $operations);
+        } catch (ExceptionInterface $e) {
+            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+        }
+
+        return true;
     }
 
     /**
@@ -123,7 +185,9 @@ class Client implements OAuthClientInterface
      */
     public function enableUser(string $identifier): bool
     {
-        // TODO: Implement enableUser() method.
+        $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_ENABLED);
+
+        return true;
     }
 
     /**
@@ -131,7 +195,9 @@ class Client implements OAuthClientInterface
      */
     public function disableUser(string $identifier): bool
     {
-        // TODO: Implement disableUser() method.
+        $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_DISABLED);
+
+        return true;
     }
 
     /**
@@ -178,21 +244,25 @@ class Client implements OAuthClientInterface
     {
         $dn = $this->buildDn($identifier);
 
-        $query = $this->ldap->query($dn, '(objectClass=inetOrgPerson)');
-        $entry = $query->execute();
+        $user = $this->getLdapEntry($dn);
 
-        if (empty($entry)) {
-            throw new ClientException('User not found.');
-        }
-
-        $user = $entry[0];
-
-        $attributes = [
+        $attributes = array_merge([
             'dn' => $user->getDn(),
-            'cn' => $user->getAttribute('cn'),
-        ];
+        ], $user->getAttributes());
 
         return new LdapUser($attributes);
+    }
+
+    protected function getLdapEntry(string $dn): Entry
+    {
+        try {
+            $query = $this->ldap->query($dn, '(objectClass=*)');
+            $entry = $query->execute();
+
+            return $entry[0];
+        } catch (LdapException $e) {
+            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+        }
     }
 
     public function setTokenFactory(TokenFactoryInterface $factory): self
@@ -236,7 +306,6 @@ class Client implements OAuthClientInterface
 
         $options['access_token'] = $tokenFactory->make($entry['dn'], ['username' => $entry['dn']]);
         $options['id_token'] = $tokenFactory->make($entry['dn'], $entry->toArray());
-        $options['refresh_token'] = Str::random(32);
         $options['expires_in'] = $tokenFactory->getExpiresIn();
 
         return new AccessToken($options);
@@ -254,9 +323,35 @@ class Client implements OAuthClientInterface
         $formatted = [];
 
         foreach ($attributes as $key => $value) {
-            $formatted["x-" . $key] = is_array($value) ? $value : [$value];
+            if (isset(self::$attributeMap[$key])) {
+                $formatted[self::$attributeMap[$key]] = $this->formatAttributeValue($value);
+
+                continue;
+            }
+
+            // If the key exists but is null, ignore it.
+            if (array_key_exists($key, self::$attributeMap)) {
+                continue;
+            }
+
+            $formatted[$key] = $this->formatAttributeValue($value);
         }
 
         return $formatted;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return array
+     */
+    protected function formatAttributeValue($value): array
+    {
+        // https://datatracker.ietf.org/doc/html/rfc4517#section-3.3.3
+        if (is_bool($value)) {
+            $value = ($value ? 'TRUE' : 'FALSE');
+        }
+
+        return Arr::wrap($value);
     }
 }

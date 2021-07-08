@@ -1,6 +1,6 @@
 <?php
 
-namespace Dvsa\Authentication\Cognito\Tests;
+namespace Dvsa\Authentication\Ldap\Tests;
 
 use Dvsa\Authentication\Ldap\Client;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
@@ -38,7 +38,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
 
         $this->mockLdap->method('getEntryManager')->willReturn($this->mockEntryManager);
 
-        $this->client = new Client($this->mockLdap, 'BASE_DN', 'SECRET');
+        $this->client = new Client($this->mockLdap, 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
     }
 
     /**
@@ -47,6 +47,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
     public function testMethodsWillThrowContractedException(string $method, array $args = []): void
     {
         $this->mockLdap->method('bind')->willThrowException(new ConnectionException);
+        $this->mockLdap->method('query')->willThrowException(new LdapException);
         $this->mockEntryManager->method(new IsAnything)->willThrowException(new LdapException);
 
         $this->expectException(ClientException::class);
@@ -63,16 +64,6 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
         yield ['changeAttributes', ['IDENTIFIER', []]];
         yield ['enableUser', ['IDENTIFIER']];
         yield ['disableUser', ['IDENTIFIER']];
-    }
-
-    public function testGetUserWillThrowErrorWhenFindingNonExistentUser(): void
-    {
-        $queryMock = $this->createMock(QueryInterface::class);
-
-        $this->mockLdap->method('query')->willReturn($queryMock);
-
-        $this->expectException(ClientException::class);
-
-        $this->client->getUserByIdentifier('IDENTIFIER');
+        yield ['getUserByIdentifier', ['IDENTIFIER']];
     }
 }
