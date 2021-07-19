@@ -3,6 +3,7 @@
 namespace Dvsa\Authentication\Ldap;
 
 use Dvsa\Contracts\Auth\AccessTokenInterface;
+use Dvsa\Contracts\Auth\CreatesResourceOwners;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
 use Dvsa\Contracts\Auth\OAuthClientInterface;
 use Dvsa\Contracts\Auth\ResourceOwnerInterface;
@@ -17,6 +18,8 @@ use Symfony\Component\Ldap\LdapInterface;
 
 class Client implements OAuthClientInterface
 {
+    use CreatesResourceOwners;
+
     const ACCOUNT_ENABLED = 0x0200;
     const ACCOUNT_DISABLED = 0x0002;
 
@@ -70,6 +73,8 @@ class Client implements OAuthClientInterface
         $this->baseDn = $baseDn;
         $this->objectClass = $objectClass;
         $this->secret = $secret;
+
+        $this->resourceOwnerClass = LdapUser::class;
     }
 
     /**
@@ -130,7 +135,7 @@ class Client implements OAuthClientInterface
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
 
-        return new LdapUser($entry->getAttributes());
+        return $this->createResourceOwner($entry->getAttributes());
     }
 
     /**
@@ -213,12 +218,7 @@ class Client implements OAuthClientInterface
             $tokenClaims = $this->decodeToken($token->getToken());
         }
 
-        return $this->createResourceOwner($tokenClaims, $token);
-    }
-
-    protected function createResourceOwner(array $claims, AccessTokenInterface $token): ResourceOwnerInterface
-    {
-        return new LdapUser($claims);
+        return $this->createResourceOwner($tokenClaims);
     }
 
     /**
@@ -250,7 +250,7 @@ class Client implements OAuthClientInterface
             'dn' => $user->getDn(),
         ], $user->getAttributes());
 
-        return new LdapUser($attributes);
+        return $this->createResourceOwner($attributes);
     }
 
     protected function getLdapEntry(string $dn): Entry

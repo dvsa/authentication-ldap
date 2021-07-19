@@ -15,7 +15,7 @@
     "ext-json": "*",
     "ext-ldap": "*",
     "ext-openssl": "*",
-    "dvsa/contracts": "^1",
+    "dvsa/contracts": "^1.1",
     "firebase/php-jwt": "^5.2",
     "illuminate/support": "^6.20 || ^8.49",
     "league/oauth2-client": "^2.6",
