@@ -304,7 +304,7 @@ class Client implements OAuthClientInterface
 
         $tokenFactory = $this->getTokenFactory();
 
-        $options['access_token'] = $tokenFactory->make($entry['dn'], ['username' => $entry['dn']]);
+        $options['access_token'] = $tokenFactory->make($entry['dn'], ['username' => Arr::first($entry['cn'])]);
         $options['id_token'] = $tokenFactory->make($entry['dn'], $entry->toArray());
         $options['expires_in'] = $tokenFactory->getExpiresIn();
 
