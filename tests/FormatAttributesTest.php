@@ -92,5 +92,14 @@ class FormatAttributesTest extends TestCase
                 new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['TRUE']),
             ],
         ];
+
+        $date = new \DateTime();
+
+        yield 'Ensure date attribute translated to string' => [
+            ['ATTRIBUTE_1' => $date, ],
+            [
+                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', [$date->format('YmdHis.v\Z')]),
+            ],
+        ];
     }
 }
