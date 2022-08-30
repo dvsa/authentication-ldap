@@ -352,6 +352,11 @@ class Client implements OAuthClientInterface
             $value = ($value ? 'TRUE' : 'FALSE');
         }
 
+        // https://datatracker.ietf.org/doc/html/rfc4517#section-3.3.13
+        if ($value instanceof \DateTimeInterface) {
+            $value = $value->format('YmdHis.v\Z');
+        }
+
         return Arr::wrap($value);
     }
 }
