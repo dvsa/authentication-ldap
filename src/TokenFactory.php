@@ -5,6 +5,7 @@ namespace Dvsa\Authentication\Ldap;
 use Carbon\CarbonImmutable;
 use Dvsa\Contracts\Auth\Exceptions\InvalidTokenException;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Illuminate\Support\Str;
 
 class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
@@ -51,7 +52,7 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
     public function validate(string $token): array
     {
         try {
-            $claims = (array)JWT::decode($token, $this->secret, ['HS512']);
+            $claims = (array)JWT::decode($token, new Key($this->secret, 'HS512'));
         } catch (\Exception $e) {
             throw new InvalidTokenException($e->getMessage(), (int) $e->getCode(), $e);
         }
