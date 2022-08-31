@@ -18,9 +18,12 @@
     "dvsa/contracts": "^1.1",
     "firebase/php-jwt": "^6.3",
     "illuminate/support": "^6.20 || ^8.49",
-    "league/oauth2-client": "^2.6",
+    "league/oauth2-client": "^2.6.1",
     "nesbot/carbon": "^2.50",
     "symfony/ldap": "^5.3"
+  },
+  "conflict": {
+      "guzzlehttp/guzzle": "<6.5.8"
   },
   "autoload": {
     "psr-4": {
@@ -39,7 +42,10 @@
   "config": {
     "sort-packages": true,
     "optimize-autoloader": true,
-    "preferred-install": "dist"
+    "preferred-install": "dist",
+    "allow-plugins": {
+      "bamarni/composer-bin-plugin": true
+    }
   },
   "minimum-stability": "dev",
   "prefer-stable": true
