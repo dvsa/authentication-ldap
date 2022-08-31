@@ -22,6 +22,9 @@
     "nesbot/carbon": "^2.50",
     "symfony/ldap": "^5.3"
   },
+  "conflict": {
+      "guzzlehttp/guzzle": "<6.5.8"
+  },
   "autoload": {
     "psr-4": {
       "Dvsa\\Authentication\\Ldap\\": "src/"

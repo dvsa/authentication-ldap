@@ -259,7 +259,7 @@ class Client implements OAuthClientInterface
             $query = $this->ldap->query($dn, '(objectClass=*)');
             $entry = $query->execute();
 
-            if (count($entry) === 0) {
+            if (empty($entry)) {
                 throw new ClientException('User not found.', 404);
             }
 
