@@ -39,7 +39,10 @@
   "config": {
     "sort-packages": true,
     "optimize-autoloader": true,
-    "preferred-install": "dist"
+    "preferred-install": "dist",
+    "allow-plugins": {
+      "bamarni/composer-bin-plugin": true
+    }
   },
   "minimum-stability": "dev",
   "prefer-stable": true
