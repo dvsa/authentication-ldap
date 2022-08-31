@@ -164,7 +164,7 @@ class Client implements OAuthClientInterface
         $operations = [];
 
         foreach ($formattedAttributes as $key => $value) {
-            $operations[$key] = new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, $key, Arr::wrap($value));
+            $operations[] = new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, $key, Arr::wrap($value));
         }
 
         try {
@@ -258,6 +258,10 @@ class Client implements OAuthClientInterface
         try {
             $query = $this->ldap->query($dn, '(objectClass=*)');
             $entry = $query->execute();
+
+            if ($entry->count() === 0) {
+                throw new ClientException('User not found.', 404);
+            }
 
             return $entry[0];
         } catch (LdapException $e) {
