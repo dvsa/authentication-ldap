@@ -41,6 +41,11 @@ class Client implements OAuthClientInterface
     /**
      * @var string
      */
+    protected $rdn;
+
+    /**
+     * @var string
+     */
     protected $baseDn;
 
     /**
@@ -59,17 +64,18 @@ class Client implements OAuthClientInterface
     protected $objectClass;
 
     /**
-     * Ldap Client constructor.
      *
      * @param  LdapInterface $ldap
+     * @param  string $rdn          the relative distinguished name.
      * @param  string $baseDn
      * @param  array  $objectClass  without extension of the `register` method, the object classes provided must
      *                              have the attributes: `userPassword` & `userAccountControl`
      * @param  string $secret key to sign the JWT
      */
-    public function __construct(LdapInterface $ldap, string $baseDn, array $objectClass, string $secret)
+    public function __construct(LdapInterface $ldap, string $rdn, string $baseDn, array $objectClass, string $secret)
     {
         $this->ldap = $ldap;
+        $this->rdn = $rdn;
         $this->baseDn = $baseDn;
         $this->objectClass = $objectClass;
         $this->secret = $secret;
@@ -296,7 +302,8 @@ class Client implements OAuthClientInterface
     protected function buildDn(string $identifier): string
     {
         return sprintf(
-            'cn=%s,%s',
+            '%s=%s,%s',
+            $this->rdn,
             $this->ldap->escape($identifier, '', \LDAP_ESCAPE_DN),
             $this->baseDn
         );
