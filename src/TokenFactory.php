@@ -33,7 +33,7 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
         $claims['sub'] = $sub;
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3
-        $claims['iss'] = $claims['aud'] = $_SERVER['SERVER_NAME'];
+        $claims['iss'] = $claims['aud'] = $this->getAudience();
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
         $claims['exp'] = $now->addSeconds($this->expiresIn)->timestamp;
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
@@ -57,10 +57,15 @@ class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
             throw new InvalidTokenException($e->getMessage(), (int) $e->getCode(), $e);
         }
 
-        if ($claims['aud'] !== $_SERVER['SERVER_NAME']) {
+        if ($claims['aud'] !== $this->getAudience()) {
             throw new InvalidTokenException('Invalid "aud" claim.');
         }
 
         return $claims;
+    }
+
+    private function getAudience(): string
+    {
+        return $_SERVER['SERVER_NAME'] ?? 'LDAP';
     }
 }

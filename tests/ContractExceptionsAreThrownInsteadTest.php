@@ -38,7 +38,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
 
         $this->mockLdap->method('getEntryManager')->willReturn($this->mockEntryManager);
 
-        $this->client = new Client($this->mockLdap, 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
+        $this->client = new Client($this->mockLdap, 'RDN', 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
     }
 
     /**
