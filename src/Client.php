@@ -37,7 +37,7 @@ class Client implements OAuthClientInterface
 
     protected string $baseDn;
 
-    protected ?TokenFactoryInterface $tokenFactory;
+    protected ?TokenFactoryInterface $tokenFactory = null;
 
     protected string $secret;
 
@@ -298,7 +298,7 @@ class Client implements OAuthClientInterface
         return $this;
     }
 
-    public function getUserAccountControlAttribute(): string
+    public function getUserAccountControlAttribute(): ?string
     {
         return $this->userAccountControlAttribute;
     }

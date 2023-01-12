@@ -49,7 +49,7 @@ class FormatAttributesTest extends TestCase
             ->expects($this->atLeastOnce())
             ->method('add')
             ->with(
-                $this->callback(function($entry) {
+                $this->callback(function ($entry) {
                     return !$entry->hasAttribute('userAccountControl');
                 })
             );
