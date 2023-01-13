@@ -28,40 +28,27 @@ class Client implements OAuthClientInterface
      * Will translate attributes passed to this object's methods ($attributes).
      *
      * ['attribute_key_1' => 'ldap_mapped_attribute', ...]
+     */
+    public static array $attributeMap = [];
+
+    protected LdapInterface $ldap;
+
+    protected string $rdn;
+
+    protected string $baseDn;
+
+    protected ?TokenFactoryInterface $tokenFactory = null;
+
+    protected string $secret;
+
+    protected array $objectClass;
+
+    /**
+     * The field that controls user account status (enabled/disabled).
      *
-     * @var array
+     * Set to `null` to disable account control. This will disable the `enableUser`/`disableUser` methods.
      */
-    public static $attributeMap = [];
-
-    /**
-     * @var LdapInterface
-     */
-    protected $ldap;
-
-    /**
-     * @var string
-     */
-    protected $rdn;
-
-    /**
-     * @var string
-     */
-    protected $baseDn;
-
-    /**
-     * @var ?TokenFactoryInterface
-     */
-    protected $tokenFactory;
-
-    /**
-     * @var string
-     */
-    protected $secret;
-
-    /**
-     * @var array
-     */
-    protected $objectClass;
+    protected ?string $userAccountControlAttribute = 'userAccountControl';
 
     /**
      *
@@ -122,11 +109,16 @@ class Client implements OAuthClientInterface
 
         $formattedAttributes = $this->formatAttributes($attributes);
 
-        $ldapAttributes = array_merge([
+        $defaultAttributes = [
             'objectClass' => $this->objectClass,
             'userPassword' => [$this->generatePassword($password)],
-            'userAccountControl' => [0],
-        ], $formattedAttributes);
+        ];
+
+        if (!empty($this->userAccountControlAttribute)) {
+            $defaultAttributes[$this->userAccountControlAttribute] = [0];
+        }
+
+        $ldapAttributes = array_merge($defaultAttributes, $formattedAttributes);
 
         $entry = new Entry($dn, $ldapAttributes);
 
@@ -196,6 +188,10 @@ class Client implements OAuthClientInterface
      */
     public function enableUser(string $identifier): bool
     {
+        if (empty($this->userAccountControlAttribute)) {
+            throw new ClientException('This method is not available while `$this->userAccountControlAttribute` is null.');
+        }
+
         $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_ENABLED);
 
         return true;
@@ -206,6 +202,10 @@ class Client implements OAuthClientInterface
      */
     public function disableUser(string $identifier): bool
     {
+        if (empty($this->userAccountControlAttribute)) {
+            throw new ClientException('This method is not available while `$this->userAccountControlAttribute` is null.');
+        }
+
         $this->changeAttribute($identifier, 'userAccountControl', (string) self::ACCOUNT_DISABLED);
 
         return true;
@@ -289,6 +289,18 @@ class Client implements OAuthClientInterface
         }
 
         return ($this->tokenFactory = new TokenFactory($this->secret));
+    }
+
+    public function setUserAccountControlAttribute(?string $attribute): self
+    {
+        $this->userAccountControlAttribute = $attribute;
+
+        return $this;
+    }
+
+    public function getUserAccountControlAttribute(): ?string
+    {
+        return $this->userAccountControlAttribute;
     }
 
     /**
