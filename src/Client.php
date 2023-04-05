@@ -192,9 +192,7 @@ class Client implements OAuthClientInterface
 
             $dn = $this->buildDn($identifier);
 
-            $entry = $this->getLdapEntry($dn);
-
-            $entryManager->applyOperations($entry->getDn(), $operations);
+            $entryManager->applyOperations($dn, $operations);
         } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
