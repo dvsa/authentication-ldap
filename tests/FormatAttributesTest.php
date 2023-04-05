@@ -38,7 +38,7 @@ class FormatAttributesTest extends TestCase
 
         $mockLdap->method('query')->willReturn($mockQuery);
 
-        $this->client = new Client($mockLdap, 'RDN', 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
+        $this->client = new Client($mockLdap, 'ADMIN_DN', 'ADMIN_PASSWORD', 'RDN', 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
     }
 
     public function testUserAccountControlAttributeNotAddedWhenRegistering(): void
