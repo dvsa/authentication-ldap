@@ -31,6 +31,10 @@ class Client implements OAuthClientInterface
      */
     public static array $attributeMap = [];
 
+    protected string $adminDn;
+
+    protected string $adminPassword;
+
     protected LdapInterface $ldap;
 
     protected string $rdn;
@@ -53,15 +57,26 @@ class Client implements OAuthClientInterface
     /**
      *
      * @param  LdapInterface $ldap
-     * @param  string $rdn          the relative distinguished name.
+     * @param  string $adminDn
+     * @param  string $adminPassword
+     * @param  string $rdn              the relative distinguished name.
      * @param  string $baseDn
-     * @param  array  $objectClass  without extension of the `register` method, the object classes provided must
-     *                              have the attributes: `userPassword` & `userAccountControl`
-     * @param  string $secret key to sign the JWT
+     * @param  array  $objectClass      without extension of the `register` method, the object classes provided must
+     *                                  have the attributes: `userPassword` & `userAccountControl`
+     * @param  string $secret           key to sign the JWT
      */
-    public function __construct(LdapInterface $ldap, string $rdn, string $baseDn, array $objectClass, string $secret)
-    {
+    public function __construct(
+        LdapInterface $ldap,
+        string $adminDn,
+        string $adminPassword,
+        string $rdn,
+        string $baseDn,
+        array $objectClass,
+        string $secret
+    ) {
         $this->ldap = $ldap;
+        $this->adminDn = $adminDn;
+        $this->adminPassword = $adminPassword;
         $this->rdn = $rdn;
         $this->baseDn = $baseDn;
         $this->objectClass = $objectClass;
@@ -122,12 +137,14 @@ class Client implements OAuthClientInterface
 
         $entry = new Entry($dn, $ldapAttributes);
 
-        /**
-         * @var EntryManager $entryManager
-         */
-        $entryManager = $this->ldap->getEntryManager();
-
         try {
+            $this->bind($this->adminDn, $this->adminPassword);
+
+            /**
+             * @var EntryManager $entryManager
+             */
+            $entryManager = $this->ldap->getEntryManager();
+
             $entryManager->add($entry);
         } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
@@ -166,6 +183,8 @@ class Client implements OAuthClientInterface
         }
 
         try {
+            $this->bind($this->adminDn, $this->adminPassword);
+
             /**
              * @var EntryManager $entryManager
              */
@@ -173,9 +192,7 @@ class Client implements OAuthClientInterface
 
             $dn = $this->buildDn($identifier);
 
-            $entry = $this->getLdapEntry($dn);
-
-            $entryManager->applyOperations($entry->getDn(), $operations);
+            $entryManager->applyOperations($dn, $operations);
         } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
@@ -262,6 +279,8 @@ class Client implements OAuthClientInterface
     protected function getLdapEntry(string $dn): Entry
     {
         try {
+            $this->bind($this->adminDn, $this->adminPassword);
+
             $query = $this->ldap->query($dn, '(objectClass=*)');
             $entry = $query->execute();
 
@@ -270,7 +289,7 @@ class Client implements OAuthClientInterface
             }
 
             return $entry[0];
-        } catch (LdapException $e) {
+        } catch (ExceptionInterface $e) {
             throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
         }
     }
