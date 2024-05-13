@@ -4,12 +4,6 @@
   "description": "A wrapper around LDAP",
   "keywords": ["dvsa", "authentication", "ldap"],
   "license": "MIT",
-  "authors": [
-    {
-      "name": "DVSA",
-      "homepage": "https://www.gov.uk/government/organisations/driver-and-vehicle-standards-agency"
-    }
-  ],
   "require": {
     "php": "^7.4 || ^8.0",
     "ext-json": "*",
@@ -23,8 +17,10 @@
     "symfony/ldap": "^5.3"
   },
   "conflict": {
-      "guzzlehttp/guzzle": "<6.5.8"
+    "guzzlehttp/guzzle": "<6.5.8"
   },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "Dvsa\\Authentication\\Ldap\\": "src/"
@@ -36,7 +32,7 @@
     }
   },
   "require-dev": {
-    "bamarni/composer-bin-plugin": "^1.4",
+    "bamarni/composer-bin-plugin": "^1.8.2",
     "phpunit/phpunit": "^9.5.4"
   },
   "config": {
@@ -47,6 +43,10 @@
       "bamarni/composer-bin-plugin": true
     }
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true
+  "extra" : {
+    "bamarni-bin": {
+      "bin-links": true,
+      "forward-command": true
+    }
+  }
 }
