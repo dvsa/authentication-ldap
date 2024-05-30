@@ -4,31 +4,22 @@ namespace Dvsa\Authentication\Ldap\Tests;
 
 use Dvsa\Authentication\Ldap\Client;
 use Dvsa\Contracts\Auth\Exceptions\ClientException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Constraint\IsAnything;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Ldap\Adapter\EntryManagerInterface;
-use Symfony\Component\Ldap\Adapter\QueryInterface;
 use Symfony\Component\Ldap\Exception\ConnectionException;
 use Symfony\Component\Ldap\Exception\LdapException;
 use Symfony\Component\Ldap\LdapInterface;
 
 class ContractExceptionsAreThrownInsteadTest extends TestCase
 {
-    /**
-     * @var MockObject|LdapInterface
-     */
-    protected $mockLdap;
+    protected MockObject|LdapInterface $mockLdap;
 
-    /**
-     * @var MockObject|EntryManagerInterface
-     */
-    protected $mockEntryManager;
+    protected MockObject|EntryManagerInterface $mockEntryManager;
 
-    /**
-     * @var Client
-     */
-    protected $client;
+    protected Client $client;
 
     protected function setUp(): void
     {
@@ -41,9 +32,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
         $this->client = new Client($this->mockLdap, 'RDN', 'BASE_DN', ['OBJECT_CLASS'], 'SECRET');
     }
 
-    /**
-     * @dataProvider provideAllClientInterfaceMethods
-     */
+    #[DataProvider('provideAllClientInterfaceMethods')]
     public function testMethodsWillThrowContractedException(string $method, array $args = []): void
     {
         $this->mockLdap->method('bind')->willThrowException(new ConnectionException);

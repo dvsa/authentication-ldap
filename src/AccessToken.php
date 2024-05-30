@@ -14,13 +14,12 @@ use League\OAuth2\Client\Token\AccessToken as BaseAccessToken;
  */
 class AccessToken extends BaseAccessToken implements AccessTokenInterface
 {
-    /**
-     * @var null|string
-     */
-    protected $idToken;
+    protected ?string $idToken;
 
     /**
      * @inheritDoc
+     *
+     * @param array<string, mixed> $options
      */
     public function __construct(array $options = [])
     {
@@ -40,12 +39,14 @@ class AccessToken extends BaseAccessToken implements AccessTokenInterface
 
     /**
      * @inheritdoc
+     *
+     * @return array<string, mixed>
      */
     public function jsonSerialize(): array
     {
         $parameters = parent::jsonSerialize();
 
-        if ($this->idToken) {
+        if ($this->idToken !== null) {
             $parameters['id_token'] = $this->idToken;
         }
 

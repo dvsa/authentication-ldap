@@ -8,6 +8,8 @@ interface TokenFactoryInterface
 {
     /**
      * Creates a signed JWT with the provided claims.
+     *
+     * @param string[] $claims
      */
     public function make(string $sub, array $claims): string;
 
@@ -16,7 +18,7 @@ interface TokenFactoryInterface
      *
      * @throws InvalidTokenException when the token provided is invalid.
      *
-     * @return array of the claims in the token.
+     * @return string[] of the claims in the token.
      */
     public function validate(string $token): array;
 

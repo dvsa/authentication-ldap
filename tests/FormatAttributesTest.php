@@ -3,38 +3,76 @@
 namespace Dvsa\Authentication\Ldap\Tests;
 
 use Dvsa\Authentication\Ldap\Client;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Ldap\Adapter\CollectionInterface;
 use Symfony\Component\Ldap\Adapter\EntryManagerInterface;
 use Symfony\Component\Ldap\Adapter\ExtLdap\EntryManager;
 use Symfony\Component\Ldap\Adapter\ExtLdap\UpdateOperation;
 use Symfony\Component\Ldap\Adapter\QueryInterface;
 use Symfony\Component\Ldap\Entry;
 use Symfony\Component\Ldap\LdapInterface;
+use Traversable;
 
 class FormatAttributesTest extends TestCase
 {
-    /**
-     * @var MockObject|EntryManagerInterface
-     */
-    protected $mockEntryManager;
+    protected MockObject|EntryManagerInterface $mockEntryManager;
 
-    /**
-     * @var Client
-     */
-    protected $client;
+    protected Client $client;
 
     protected function setUp(): void
     {
         $this->mockEntryManager = $this->createMock(EntryManager::class);
+        $this->mockEntryManager->method('applyOperations')->willReturnSelf();
 
         $mockLdap = $this->createMock(LdapInterface::class);
         $mockLdap->method('getEntryManager')->willReturn($this->mockEntryManager);
 
+        $collectionClass = new class implements CollectionInterface {
+            public array $entries = [];
+
+            public function toArray(): array
+            {
+                return $this->entries;
+            }
+
+            public function offsetExists($offset): bool
+            {
+                return isset($this->entries[$offset]);
+            }
+
+            public function getIterator(): Traversable
+            {
+                return new \ArrayIterator($this->entries);
+            }
+
+            public function offsetGet(mixed $offset): mixed
+            {
+                return $this->entries[$offset];
+            }
+
+            public function offsetSet(mixed $offset, mixed $value): void
+            {
+                $this->entries[$offset] = $value;
+            }
+
+            public function offsetUnset(mixed $offset): void
+            {
+                unset($this->entries[$offset]);
+            }
+
+            public function count(): int
+            {
+                return count($this->entries);
+            }
+        };
+
+        $collection = new $collectionClass();
+        $collection[0] = new Entry('cn=PHPUnit,dc=local', []);
+
         $mockQuery = $this->createMock(QueryInterface::class);
-        $mockQuery->method('execute')->willReturn([
-            new Entry('cn=PHPUnit,dc=local', [])
-        ]);
+        $mockQuery->method('execute')->willReturn($collection);
 
         $mockLdap->method('query')->willReturn($mockQuery);
 
@@ -57,9 +95,7 @@ class FormatAttributesTest extends TestCase
         $this->client->register('IDENTIFIER', 'PASSWORD', []);
     }
 
-    /**
-     * @dataProvider providesAttributesAndResultingOperations
-     */
+    #[DataProvider('providesAttributesAndResultingOperations')]
     public function testAttributesAreFormattedCorrectly(array $before, array $after, array $map = []): void
     {
         $this->client::$attributeMap = $map;
