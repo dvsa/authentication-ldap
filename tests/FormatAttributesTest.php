@@ -66,56 +66,56 @@ class FormatAttributesTest extends TestCase
 
         $this->mockEntryManager
             ->method('applyOperations')
-            ->will($this->returnCallback(function ($dn, $operations) use ($after) {
+            ->willReturnCallback(function ($dn, $operations) use ($after) {
                 $this->assertEquals($after, array_values($operations));
-            }));
+            });
 
         $this->client->changeAttributes('IDENTIFIER', $before);
     }
 
-    public function providesAttributesAndResultingOperations(): \Generator
+    public static function providesAttributesAndResultingOperations(): \Generator
     {
         yield 'Ensure attributes are translated to `UpdateOperation` objects' => [
-            ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2'],
-            [
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['VALUE_2']),
-            ],
+          ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2'],
+          [
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['VALUE_2']),
+          ],
         ];
 
         yield 'Ensure attribute removed if mapped to null' => [
-            ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2', 'ATTRIBUTE_3' => 'VALUE_3'],
-            [
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['VALUE_2']),
-            ],
-            ['ATTRIBUTE_3' => null, ],
+          ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2', 'ATTRIBUTE_3' => 'VALUE_3'],
+          [
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['VALUE_2']),
+          ],
+          ['ATTRIBUTE_3' => null, ],
         ];
 
         yield 'Ensure attribute renamed if mapped to a different key' => [
-            ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2', ],
-            [
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'RENAMED_ATTRIBUTE_2', ['VALUE_2']),
-            ],
-            ['ATTRIBUTE_2' => 'RENAMED_ATTRIBUTE_2', ],
+          ['ATTRIBUTE_1' => 'VALUE_1', 'ATTRIBUTE_2' => 'VALUE_2', ],
+          [
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['VALUE_1']),
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'RENAMED_ATTRIBUTE_2', ['VALUE_2']),
+          ],
+          ['ATTRIBUTE_2' => 'RENAMED_ATTRIBUTE_2', ],
         ];
 
         yield 'Ensure bool attribute translated to string' => [
-            ['ATTRIBUTE_1' => false, 'ATTRIBUTE_2' => true, ],
-            [
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['FALSE']),
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['TRUE']),
-            ],
+          ['ATTRIBUTE_1' => false, 'ATTRIBUTE_2' => true, ],
+          [
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', ['FALSE']),
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_2', ['TRUE']),
+          ],
         ];
 
         $date = new \DateTime();
 
         yield 'Ensure date attribute translated to string' => [
-            ['ATTRIBUTE_1' => $date, ],
-            [
-                new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', [$date->format('YmdHis.v\Z')]),
-            ],
+          ['ATTRIBUTE_1' => $date, ],
+          [
+              new UpdateOperation(LDAP_MODIFY_BATCH_REPLACE, 'ATTRIBUTE_1', [$date->format('YmdHis.v\Z')]),
+          ],
         ];
     }
 }

@@ -55,7 +55,7 @@ class ContractExceptionsAreThrownInsteadTest extends TestCase
         $this->client->{$method}(...$args);
     }
 
-    public function provideAllClientInterfaceMethods(): \Generator
+    public static function provideAllClientInterfaceMethods(): \Generator
     {
         yield ['authenticate', ['IDENTIFIER', 'PASSWORD']];
         yield ['register', ['IDENTIFIER', 'PASSWORD', []]];
