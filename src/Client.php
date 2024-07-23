@@ -28,20 +28,12 @@ class Client implements OAuthClientInterface
      * Will translate attributes passed to this object's methods ($attributes).
      *
      * ['attribute_key_1' => 'ldap_mapped_attribute', ...]
+     *
+     * @var array<string, string>
      */
     public static array $attributeMap = [];
 
-    protected LdapInterface $ldap;
-
-    protected string $rdn;
-
-    protected string $baseDn;
-
     protected ?TokenFactoryInterface $tokenFactory = null;
-
-    protected string $secret;
-
-    protected array $objectClass;
 
     /**
      * The field that controls user account status (enabled/disabled).
@@ -55,18 +47,17 @@ class Client implements OAuthClientInterface
      * @param  LdapInterface $ldap
      * @param  string $rdn          the relative distinguished name.
      * @param  string $baseDn
-     * @param  array  $objectClass  without extension of the `register` method, the object classes provided must
+     * @param  string[] $objectClass  without extension of the `register` method, the object classes provided must
      *                              have the attributes: `userPassword` & `userAccountControl`
      * @param  string $secret key to sign the JWT
      */
-    public function __construct(LdapInterface $ldap, string $rdn, string $baseDn, array $objectClass, string $secret)
-    {
-        $this->ldap = $ldap;
-        $this->rdn = $rdn;
-        $this->baseDn = $baseDn;
-        $this->objectClass = $objectClass;
-        $this->secret = $secret;
-
+    public function __construct(
+        protected LdapInterface $ldap,
+        protected string $rdn,
+        protected string $baseDn,
+        protected array $objectClass,
+        protected string $secret
+    ) {
         $this->resourceOwnerClass = LdapUser::class;
     }
 
@@ -80,7 +71,7 @@ class Client implements OAuthClientInterface
         try {
             $this->bind($dn, $password);
         } catch (ExceptionInterface $e) {
-            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
         $user = $this->getUserByIdentifier($identifier);
@@ -95,7 +86,7 @@ class Client implements OAuthClientInterface
      */
     protected function throwIfAccountDisabled(ResourceOwnerInterface $user): void
     {
-        if (Arr::first($user['userAccountControl']) === (string) self::ACCOUNT_DISABLED) {
+        if (Arr::first((array) $user['userAccountControl']) === (string) self::ACCOUNT_DISABLED) {
             throw new ClientException('Account disabled.');
         }
     }
@@ -114,7 +105,7 @@ class Client implements OAuthClientInterface
             'userPassword' => [$this->generatePassword($password)],
         ];
 
-        if (!empty($this->userAccountControlAttribute)) {
+        if ($this->userAccountControlAttribute !== null) {
             $defaultAttributes[$this->userAccountControlAttribute] = [0];
         }
 
@@ -130,7 +121,7 @@ class Client implements OAuthClientInterface
         try {
             $entryManager->add($entry);
         } catch (ExceptionInterface $e) {
-            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
         return $this->createResourceOwner($entry->getAttributes());
@@ -177,7 +168,7 @@ class Client implements OAuthClientInterface
 
             $entryManager->applyOperations($entry->getDn(), $operations);
         } catch (ExceptionInterface $e) {
-            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
 
         return true;
@@ -188,7 +179,7 @@ class Client implements OAuthClientInterface
      */
     public function enableUser(string $identifier): bool
     {
-        if (empty($this->userAccountControlAttribute)) {
+        if ($this->userAccountControlAttribute === null) {
             throw new ClientException('This method is not available while `$this->userAccountControlAttribute` is null.');
         }
 
@@ -202,7 +193,7 @@ class Client implements OAuthClientInterface
      */
     public function disableUser(string $identifier): bool
     {
-        if (empty($this->userAccountControlAttribute)) {
+        if ($this->userAccountControlAttribute === null) {
             throw new ClientException('This method is not available while `$this->userAccountControlAttribute` is null.');
         }
 
@@ -218,7 +209,9 @@ class Client implements OAuthClientInterface
     {
         // If the ID token is not null, use to build the resource owner.
         // Otherwise, use the claims from the access token.
-        if ($idToken = $token->getIdToken()) {
+        $idToken = $token->getIdToken();
+
+        if ($idToken !== null) {
             $tokenClaims = $this->decodeToken($idToken);
         } else {
             $tokenClaims = $this->decodeToken($token->getToken());
@@ -271,7 +264,7 @@ class Client implements OAuthClientInterface
 
             return $entry[0];
         } catch (LdapException $e) {
-            throw new ClientException($e->getMessage(), (int) $e->getCode(), $e);
+            throw new ClientException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
@@ -327,8 +320,23 @@ class Client implements OAuthClientInterface
 
         $tokenFactory = $this->getTokenFactory();
 
-        $options['access_token'] = $tokenFactory->make($entry['dn'], ['username' => Arr::first($entry['cn'])]);
-        $options['id_token'] = $tokenFactory->make($entry['dn'], $entry->toArray());
+        $dn = $entry['dn'];
+        $cn = $entry['cn'];
+
+        if (empty($dn) || empty($cn)) {
+            throw new ClientException('Resource owner must have a distinguished name (dn) and common name (cn).');
+        }
+
+        if (!is_array($cn)) {
+            $cn = [$cn];
+        }
+
+        if (!is_string($dn)) {
+            throw new ClientException('Resource owner must have a distinguished name (dn) as a string.');
+        }
+
+        $options['access_token'] = $tokenFactory->make($dn, ['username' => Arr::first($cn)]);
+        $options['id_token'] = $tokenFactory->make($dn, $entry->toArray());
         $options['expires_in'] = $tokenFactory->getExpiresIn();
 
         return new AccessToken($options);
@@ -341,6 +349,11 @@ class Client implements OAuthClientInterface
         return '{SSHA}' . base64_encode(sha1($password . $salt, true) . $salt);
     }
 
+    /**
+     * @param array<string, mixed> $attributes
+     *
+     * @return array<string, array<mixed>>
+     */
     protected function formatAttributes(array $attributes): array
     {
         $formatted = [];
@@ -364,11 +377,9 @@ class Client implements OAuthClientInterface
     }
 
     /**
-     * @param mixed $value
-     *
-     * @return array
+     * @return array<mixed>
      */
-    protected function formatAttributeValue($value): array
+    protected function formatAttributeValue(mixed $value): array
     {
         // https://datatracker.ietf.org/doc/html/rfc4517#section-3.3.3
         if (is_bool($value)) {

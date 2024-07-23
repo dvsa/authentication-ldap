@@ -3,6 +3,7 @@
 namespace Dvsa\Authentication\Ldap;
 
 use Dvsa\Contracts\Auth\AbstractResourceOwner;
+use Dvsa\Contracts\Auth\Exceptions\ClientException;
 use Illuminate\Support\Arr;
 
 /**
@@ -12,8 +13,21 @@ use Illuminate\Support\Arr;
  */
 class LdapUser extends AbstractResourceOwner
 {
+    /**
+     * @throws ClientException
+     */
     public function getId(): string
     {
-        return Arr::first($this->get('cn'));
+        $cn = $this->get('cn');
+
+        if (is_array($cn)) {
+            $cn = Arr::first($cn);
+        }
+
+        if (!is_string($cn)) {
+            throw new ClientException('The "cn" claim is not an array or string.');
+        }
+
+        return $cn;
     }
 }

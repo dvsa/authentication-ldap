@@ -5,15 +5,13 @@ namespace Dvsa\Authentication\Ldap\Tests;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Dvsa\Authentication\Ldap\TokenFactory;
+use Dvsa\Authentication\Ldap\TokenFactoryInterface;
 use Dvsa\Contracts\Auth\Exceptions\InvalidTokenException;
 use PHPUnit\Framework\TestCase;
 
 class TokenFactoryTest extends TestCase
 {
-    /**
-     * @var TokenFactory
-     */
-    protected $tokenFactory;
+    protected TokenFactoryInterface $tokenFactory;
 
     protected function setUp(): void
     {

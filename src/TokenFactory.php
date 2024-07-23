@@ -10,16 +10,10 @@ use Illuminate\Support\Str;
 
 class TokenFactory extends AbstractTokenFactory implements TokenFactoryInterface
 {
-    /**
-     * Secret key that will sign the provided JWT.
-     *
-     * @var string
-     */
-    protected $secret;
-
-    public function __construct(string $secret)
-    {
-        $this->secret = $secret;
+    public function __construct(
+        protected string $secret
+    ) {
+      // ...
     }
 
     /**
