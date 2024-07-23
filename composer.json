@@ -2,7 +2,11 @@
   "name": "dvsa/authentication-ldap",
   "type": "library",
   "description": "A wrapper around LDAP",
-  "keywords": ["dvsa", "authentication", "ldap"],
+  "keywords": [
+    "dvsa",
+    "authentication",
+    "ldap"
+  ],
   "license": "MIT",
   "require": {
     "php": "^8.2",
@@ -40,7 +44,7 @@
       "bamarni/composer-bin-plugin": true
     }
   },
-  "extra" : {
+  "extra": {
     "bamarni-bin": {
       "bin-links": true,
       "forward-command": true
